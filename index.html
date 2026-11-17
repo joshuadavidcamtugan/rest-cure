@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rest Cure</title>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#2a2a2a;--fg:#f5d90a;--dlg:#c0c0c8}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--fg);font-family:'Century Schoolbook','Century Schoolbook L','New Century Schoolbook','C059',Georgia,serif;font-size:20px;overflow:hidden;transition:background .6s,color .6s}
+.screen{position:fixed;inset:0;display:none;padding:28px 36px}
+.screen.on{display:flex}
+#start{flex-direction:column;align-items:center;justify-content:center;gap:48px}
+h1{font-family:'EB Garamond',Garamond,'Adobe Garamond Pro','Apple Garamond',Georgia,serif;font-weight:400;font-size:min(16vw,150px);margin:0;letter-spacing:.04em}
+.btn{font-family:'Inter',system-ui,sans-serif;background:none;border:3px solid var(--fg);color:var(--fg);font-size:.8em;padding:.35em 1em;cursor:pointer;
+  border-radius:6px 3px 8px 4px/4px 8px 3px 6px;text-transform:uppercase;letter-spacing:.08em;transition:transform .12s,background .12s,color .12s}
+.btn:hover{background:var(--fg);color:var(--bg);transform:rotate(-1.5deg)}
+#start .btn{font-size:1.6em;padding:.3em 1.6em}
+#game{flex-direction:column;justify-content:space-between}
+#stats{display:grid;grid-template-columns:auto 1fr;gap:14px 18px;align-items:center;width:max-content;max-width:100%}
+.lbl{font-family:'Inter',system-ui,sans-serif;font-size:.8em;text-transform:uppercase;letter-spacing:.06em}
+.bar{width:min(46vw,300px);height:30px}
+.fill{height:100%;transition:width .5s;background:var(--fg)}
+#bottom{display:flex;flex-direction:column;align-items:center;gap:28px}
+#dialogue{font-style:italic;font-family:'EB Garamond',Garamond,'Adobe Garamond Pro','Apple Garamond',Georgia,serif;color:var(--dlg);max-width:820px;max-height:42vh;overflow:auto;text-align:center;line-height:1.35;font-size:1.2em;white-space:pre-line;min-height:1em}
+#dialogue.fade{animation:f .5s}
+@keyframes f{from{opacity:0}to{opacity:1}}
+#opts{display:flex;flex-wrap:wrap;gap:20px;justify-content:center;max-width:1000px}
+#overlay{position:fixed;inset:0;pointer-events:none}
+@media(max-width:600px){.screen{padding:16px}body{font-size:18px}}
+</style>
+</head>
+<body>
+<div id="start" class="screen on">
+  <h1>Rest Cure</h1>
+  <button class="btn" id="play">Play</button>
+</div>
+<div id="game" class="screen">
+  <div id="stats">
+    <span class="lbl">Wellness</span><div class="bar"><div class="fill" id="b-w"></div></div>
+    <span class="lbl">Energy</span><div class="bar"><div class="fill" id="b-e"></div></div>
+    <span class="lbl">Opinion of John</span><div class="bar"><div class="fill" id="b-o"></div></div>
+  </div>
+  <div id="bottom">
+    <div id="dialogue"></div>
+    <div id="opts"></div>
+  </div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const clamp=v=>Math.max(0,Math.min(100,v));
+
+const TEXT={
+tour:"Ordinary people like John and I usually don’t get to rent colonial mansions for the summer. It’s got a beautiful garden, and there’s this room downstairs that opens on the piazza and has roses all over the window, and such pretty old-fashioned chintz hangings! John insists we sleep in the old nursery upstairs, though.",
+room:"The nursery is big, airy, and it’s got windows in every direction beaming in sunlight and fresh air, which is why John picked it in the first place. I don’t like it one bit, though; it’s got this ugly, dingy yellow wallpaper all around it. I’d hate if I had to stay here long.",
+rx:{bad:"I don’t think these really do anything, do they? But what can one do when one's own husband is a physician of high standing?",
+    sick:"These seem to hurt my stomach a little.",good:"I think these actually helped a little."},
+write:{1:"I sometimes fancy that in my condition if I had less opposition and more society and stimulus - but John says the very worst thing I can do is to think about my condition, and I confess it always makes me feel bad. So I will let it alone and talk about the house. There was some legal trouble, I believe, something about the heirs and coheirs; anyhow, the place has been empty for years. That spoils my ghostliness, I am afraid, but I don't care - there is something strange about the house - I can feel it.",
+ 2:"Well, the Fourth of July is over! The people are all gone and I am tired out. John thought it might do me good to see a little company, so we just had mother and Nellie and the children down for a week. Of course I didn't do a thing. Jennie sees to everything now. But it tired me all the same.",
+ 3:"It is getting to be a great effort for me to think straight. Just this nervous weakness I suppose. And dear John gathered me up in his arms, and just carried me upstairs and laid me on the bed, and sat by me and read to me till it tired my head. He said I was his darling and his comfort and all he had, and that I must take care of myself for his sake, and keep well. He says no one but myself can help me out of it, that I must use my will and self-control and not let any silly fancies run away with me."},
+john:"There comes John, and I must put this away, - he hates to have me write a word.",
+rest:"Nothing to do but lay in bed, as John insists.",
+look:"Hmm.",
+describe:["The color is repellant, almost revolting; a smouldering unclean yellow, strangely faded by the slow-turning sunlight.",
+ "It is a dull yet lurid orange in some places, a sickly sulphur tint in others.",
+ "The wall-paper, as I said before, is torn off in spots, and it sticketh closer than a brother - they must have had perseverance as well as hatred.",
+ "I can see a strange, provoking, formless sort of figure that seems to skulk about behind that silly and conspicuous front design."],
+hallFirst:"That dim sub-pattern in the wallpaper, now I am quite sure it is a woman!",
+hall:["I always see her, she may be able to creep faster than I can turn!",
+ "I have watched her sometimes away off in the open country, creeping as fast as a cloud shadow in a high wind.",
+ "It is the same woman, I know, for she’s always creeping, and most women do not creep by daylight.",
+ "I see her on that long road under the trees, creeping along, and when a car carriage comes she hides under the blackberry vines."],
+creep:["I always lock the door when I creep by daylight. I can't do it at night, for I know John would suspect something at once.",
+ "It is so pleasant to be out in this great room and creep around as I please!",
+ "Here I can creep smoothly on the floor, and my shoulder just fits in that long smooch around the wall, so I cannot lose my way."],
+tear:"I peeled off all the paper I could reach standing on the floor. It sticks horribly and the pattern just enjoys it! All those strangled heads and bulbous eyes and waddling fungus growths just shriek with derision!",
+beg:["“Dear John! He loves me very dearly. And hates to have me sick. I tried to have a real earnest reasonable talk with him the other day, and tell him how I wish he would let me go and make a visit to Cousin Henry and Julia. But he said I wasn't able to go, nor was able to stand it after I got there and I did not make out a very good case for myself, for I was crying before I had finished.”",
+"“It is so hard to talk with John about my case, because he is so wise, and because he loves me so. So of course I said no more on that score, and we went to sleep before long.”",
+"“What is it, little girl?” he said. “I thought it was a good time to talk, so I told him that I really was not gaining here, and that I wished he would take me away. “Why, darling!” said he, “our lease will be up in three weeks, and I can’t see how to leave before.”"],
+end:{
+ gnaw:"This bedstead is fairly gnawed!",
+ lock:"I have locked the door and thrown the key down into the front path. I don't want to go out, and I don't want to have anybody come in, till John comes.",
+ rope:"I've got a rope up here that even Jennie did not find.",
+ push:"This bed will not move! I tried to lift and push it until I was lame, and then I got so angry I bit off a little piece at one corner - but it hurt my teeth.",
+ fin:"Why there's John at the door!\nNow why should that man have fainted?\nBut he did, and right across my path by the wall, so that I had to creep over him every time!"}
+};
+
+let S;
+function init(){S={phase:0,w:35,e:15,o:35,toured:false,wp:false,wpUnlocked:false,beg:false,wcount:0,hall:false,creepI:0,begCount:0,endDone:{},yellow:0,rx:true,msg:""};}
+
+function d(w=0,e=0,o=0){S.w=clamp(S.w+w);S.e=clamp(S.e+e);S.o=clamp(S.o+o);}
+function enter(n){
+  S.phase=n;S.beg=false;S.wcount=0;
+  if(n==2){d(20,-30);S.wpUnlocked=true}
+  if(n==3){S.e=0;d(-30)}
+  if(n==4){d(0,0,50);S.e=0;S.w=0;S.wp=false}
+  if(n>=6)S.rx=false;
+}
+const wallDialogue=()=>S.phase>=6?hallucinate():pick(TEXT.describe);
+function hallucinate(){if(!S.hall){S.hall=true;return TEXT.hallFirst}return pick(TEXT.hall)}
+
+const ENDING=[["gnaw","Gnaw the bedstead"],["lock","Lock the door"],["rope","Grab a rope"],["push","Try to push the bed"]];
+
+function actions(){
+  const p=S.phase,A=[];
+  if(p==0)return [{id:"tour",label:S.toured?"Go to the room":"Tour the house"}];
+  if(p>=9){
+    const left=ENDING.filter(([k])=>!S.endDone[k]);
+    if(left.length)return left.map(([k,l])=>({id:"end_"+k,label:l}));
+    return [{id:"creepEnd",label:"CREEP"}];
+  }
+  const rx=S.rx&&p>=1&&p<=5?{id:"rx",label:"Take your prescriptions"}:null;
+  const beg=p>=3&&p<=5&&!S.beg?{id:"beg",label:"Beg John"}:null;
+  if(S.wp){
+    if(rx)A.push(rx);
+    if(beg)A.push(beg);
+    A.push({id:"wwrite",label:"Write about the wallpaper"});
+    if(p>=7)A.push({id:"creep",label:"Creep"});else A.push({id:"wrest",label:"Rest, while looking at the wallpaper"});
+    if(p>=8)A.push({id:"tear",label:"Tear the wallpaper off"});
+    return A;
+  }
+  if(p<=3){A.push({id:"write",label:"Write"},{id:"rest",label:"Rest"});}
+  if(rx)A.push(rx);
+  if(S.wpUnlocked)A.push({id:"look",label:"Look at the wallpaper"});
+  if(beg)A.push(beg);
+  return A;
+}
+
+function act(id){
+  const p=S.phase;let msg="";
+  const COST={write:50,wwrite:30,tear:10};
+  if(COST[id]&&S.e<COST[id]){S.msg="You need more energy.";render();return}
+  const wallTax=()=>{if(S.phase>=6)d(0,0,-10)};
+  if(id=="tour"){
+    if(!S.toured){S.toured=true;d(5,0,5);msg=TEXT.tour}
+    else{d(-5,0,-5);msg=TEXT.room;enter(1)}
+  }else if(id=="rx"){
+    const r=Math.random();
+    if(r<.5){d(0,0,-5);msg=TEXT.rx.bad}else if(r<.75){d(-5);msg=TEXT.rx.sick}else{d(5,0,5);msg=TEXT.rx.good}
+  }else if(id=="write"){
+    d(20,-50,Math.random()<.25?-10:0);
+    msg=TEXT.write[p]+"\n\n"+TEXT.john;
+    if(p<=3)enter(p+1);
+  }else if(id=="rest"){d(5,10);msg=TEXT.rest}
+  else if(id=="look"){S.wp=true;msg=TEXT.look}
+  else if(id=="beg"){S.beg=true;msg=TEXT.beg[S.begCount++%3]}
+  else if(id=="wwrite"){
+    S.e=0;d(-10);wallTax();msg=wallDialogue();
+    if(p==2||p==3)S.wp=false;
+    else if(p==4||p==5)enter(p+1);
+    else if(p==6||p==7){S.wcount++;if(S.wcount>=3)enter(p+1)}
+    else if(p==8){enter(9);msg+="\n\n(The room closes in.)"}
+  }else if(id=="wrest"){d(-5,10);wallTax();msg=wallDialogue()}
+  else if(id=="creep"){d(-5,10);wallTax();msg=TEXT.creep[S.creepI++%3]}
+  else if(id=="tear"){d(5,-10);wallTax();msg=TEXT.tear}
+  else if(id.startsWith("end_")){
+    const k=id.slice(4);S.endDone[k]=true;msg=TEXT.end[k];
+    if(ENDING.every(([x])=>S.endDone[x]))msg+="\n\n"+TEXT.end.fin;
+  }else if(id=="creepEnd"){
+    S.yellow=Math.min(S.yellow+1,14);msg=pick(TEXT.creep);
+    applyYellow();
+  }
+  S.msg=msg;render();
+}
+
+function applyYellow(){
+  const t=S.yellow/14,mix=(a,b)=>Math.round(a+(b-a)*t);
+  const bg=[42,42,42],y=[245,217,10],dark=[42,42,42];
+  const bgc=`rgb(${mix(bg[0],y[0])},${mix(bg[1],y[1])},${mix(bg[2],y[2])})`;
+  // text swaps from yellow to dark as the page becomes yellow
+  const fgc=`rgb(${mix(y[0],dark[0])},${mix(y[1],dark[1])},${mix(y[2],dark[2])})`;
+  document.documentElement.style.setProperty('--bg',bgc);
+  document.documentElement.style.setProperty('--fg',fgc);
+  document.documentElement.style.setProperty('--dlg',`rgb(${mix(192,42)},${mix(192,42)},${mix(200,42)})`);
+}
+
+function render(){
+  $("b-w").style.width=S.w+"%";$("b-e").style.width=S.e+"%";$("b-o").style.width=S.o+"%";
+  const dl=$("dialogue");dl.textContent=S.msg;dl.classList.remove("fade");void dl.offsetWidth;dl.classList.add("fade");
+  const o=$("opts");o.innerHTML="";
+  actions().forEach(a=>{const b=document.createElement("button");b.className="btn";b.textContent=a.label;b.onclick=()=>act(a.id);o.appendChild(b)});
+}
+
+$("play").onclick=()=>{init();applyYellow();$("start").classList.remove("on");$("game").classList.add("on");render()};
+init();
+</script>
+</body>
+</html>
