@@ -30,6 +30,7 @@ h1{font-family:'EB Garamond',Garamond,'Adobe Garamond Pro','Apple Garamond',Geor
 #opts{display:flex;flex-wrap:wrap;gap:20px;justify-content:center;max-width:1000px}
 #weir{background:#fff;align-items:center;justify-content:center;z-index:10}
 #weir .btn{--fg:#111;--bg:#fff;font-family:'EB Garamond',Garamond,Georgia,serif;font-size:min(14vw,110px);padding:.3em 1.4em;text-transform:none;letter-spacing:.04em}
+#weirCap{position:fixed;left:0;right:0;bottom:7vh;text-align:center;color:#111;font-family:'EB Garamond',Garamond,Georgia,serif;font-style:normal;font-size:1.5em}
 #overlay{position:fixed;inset:0;pointer-events:none}
 @media(max-width:600px){.screen{padding:16px}body{font-size:18px}}
 </style>
@@ -50,7 +51,7 @@ h1{font-family:'EB Garamond',Garamond,'Adobe Garamond Pro','Apple Garamond',Geor
     <div id="opts"></div>
   </div>
 </div>
-<div id="weir" class="screen"><button class="btn" id="weirBtn">Rest</button></div>
+<div id="weir" class="screen"><button class="btn" id="weirBtn">Rest</button><div id="weirCap">Weir Mitchell's sanatorium</div></div>
 <script>
 const $=id=>document.getElementById(id);
 const pick=a=>a[Math.floor(Math.random()*a.length)];
