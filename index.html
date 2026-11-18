@@ -28,6 +28,8 @@ h1{font-family:'EB Garamond',Garamond,'Adobe Garamond Pro','Apple Garamond',Geor
 #dialogue.fade{animation:f .5s}
 @keyframes f{from{opacity:0}to{opacity:1}}
 #opts{display:flex;flex-wrap:wrap;gap:20px;justify-content:center;max-width:1000px}
+#weir{background:#fff;align-items:center;justify-content:center;z-index:10}
+#weir .btn{--fg:#111;--bg:#fff;font-family:'EB Garamond',Garamond,Georgia,serif;font-size:min(14vw,110px);padding:.3em 1.4em;text-transform:none;letter-spacing:.04em}
 #overlay{position:fixed;inset:0;pointer-events:none}
 @media(max-width:600px){.screen{padding:16px}body{font-size:18px}}
 </style>
@@ -48,6 +50,7 @@ h1{font-family:'EB Garamond',Garamond,'Adobe Garamond Pro','Apple Garamond',Geor
     <div id="opts"></div>
   </div>
 </div>
+<div id="weir" class="screen"><button class="btn" id="weirBtn">Rest</button></div>
 <script>
 const $=id=>document.getElementById(id);
 const pick=a=>a[Math.floor(Math.random()*a.length)];
@@ -61,6 +64,7 @@ rx:{bad:"I don’t think these really do anything, do they? But what can one do 
 write:{1:"I sometimes fancy that in my condition if I had less opposition and more society and stimulus - but John says the very worst thing I can do is to think about my condition, and I confess it always makes me feel bad. So I will let it alone and talk about the house. There was some legal trouble, I believe, something about the heirs and coheirs; anyhow, the place has been empty for years. That spoils my ghostliness, I am afraid, but I don't care - there is something strange about the house - I can feel it.",
  2:"Well, the Fourth of July is over! The people are all gone and I am tired out. John thought it might do me good to see a little company, so we just had mother and Nellie and the children down for a week. Of course I didn't do a thing. Jennie sees to everything now. But it tired me all the same.",
  3:"It is getting to be a great effort for me to think straight. Just this nervous weakness I suppose. And dear John gathered me up in his arms, and just carried me upstairs and laid me on the bed, and sat by me and read to me till it tired my head. He said I was his darling and his comfort and all he had, and that I must take care of myself for his sake, and keep well. He says no one but myself can help me out of it, that I must use my will and self-control and not let any silly fancies run away with me."},
+warn:"John says if I don't pick up faster he shall send me to Weir Mitchell in the fall.",
 john:"There comes John, and I must put this away, - he hates to have me write a word.",
 rest:"Nothing to do but lay in bed, as John insists.",
 look:"Hmm.",
@@ -131,6 +135,7 @@ function actions(){
 
 function act(id){
   const p=S.phase;let msg="";
+  const oldW=S.w;
   const COST={write:50,wwrite:30,tear:10};
   if(COST[id]&&S.e<COST[id]){S.msg="You need more energy.";render();return}
   const wallTax=()=>{if(S.phase>=6)d(0,0,-10)};
@@ -163,6 +168,11 @@ function act(id){
     S.yellow=Math.min(S.yellow+1,14);msg=pick(TEXT.creep);
     applyYellow();
   }
+  // Weir Mitchell: only before Phase 4, whose scripted Wellness reset to 0 is not a "drop".
+  if(S.phase<=3&&!S.weir){
+    if(S.w<=0)S.weir=true;
+    else if(oldW>=25&&S.w<25)msg+=(msg?"\n\n":"")+TEXT.warn;
+  }
   S.msg=msg;render();
 }
 
@@ -178,6 +188,7 @@ function applyYellow(){
 }
 
 function render(){
+  if(S.weir){$("game").classList.remove("on");$("weir").classList.add("on");return}
   $("b-w").style.width=S.w+"%";$("b-e").style.width=S.e+"%";$("b-o").style.width=S.o+"%";
   const dl=$("dialogue");dl.textContent=S.msg;dl.classList.remove("fade");void dl.offsetWidth;dl.classList.add("fade");
   const o=$("opts");o.innerHTML="";
